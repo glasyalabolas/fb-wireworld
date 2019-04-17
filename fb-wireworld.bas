@@ -1,14 +1,11 @@
 #include once "fbgfx.bi"
 #include once "file.bi"
 
-enum State
-  Empty => rgba( 0, 0, 0, 255 )
-  ElectronHead => rgba( 255, 255, 255, 255 )
-  ElectronTail => rgba( 0, 128, 255, 255 )
-  Connector => rgba( 0, 0, 64, 255 )
-end enum
- 
-type WireWorld
+/'
+  A simple class that implements the Wireworld cellular
+  automata.
+'/
+type Wireworld
   public:
     declare constructor( _
       byval as integer, _
@@ -17,17 +14,23 @@ type WireWorld
     
     declare operator _
       cast() as Fb.Image ptr
+    
     declare property _
       width() as integer
     declare property _
       height() as integer
-    declare property _
-      circuit() as Fb.Image ptr
     
     declare sub _
       update()
     
   private:
+    enum State
+      Empty => rgba( 0, 0, 0, 255 )
+      ElectronHead => rgba( 255, 255, 255, 255 )
+      ElectronTail => rgba( 0, 128, 255, 255 )
+      Connector => rgba( 0, 0, 64, 255 )
+    end enum
+    
     declare constructor()
     
     as Fb.Image ptr _
@@ -41,11 +44,11 @@ type WireWorld
 end type
 
 constructor _
-  WireWorld()
+  Wireworld()
 end constructor
 
 constructor _
-  WireWorld( _
+  Wireworld( _
     byval aWidth as integer, _
     byval aHeight as integer )
   
@@ -66,7 +69,7 @@ constructor _
 end constructor
 
 destructor _
-  WireWorld()
+  Wireworld()
   
   for _
     i as integer => 0 to 1
@@ -76,53 +79,34 @@ destructor _
 end destructor
 
 operator _
-  WireWorld.cast() _
+  Wireworld.cast() _
   as Fb.Image ptr
   
   return( m_circuit( m_activeCircuit ) )
 end operator
 
 property _
-  WireWorld.width() _
+  Wireworld.width() _
   as integer
   
   return( m_width )
 end property
 
 property _
-  WireWorld.height() _
+  Wireworld.height() _
   as integer
   
   return( m_height )
 end property
 
-property _
-  WireWorld.circuit() _
-  as Fb.Image ptr
-  
-  return( m_circuit( m_backCircuit ) )
-end property
-
 sub _
-  WireWorld.update()
+  Wireworld.update()
   
   #macro pixel( buffer, x, y )
     ( cptr( _
       ulong ptr, _
       buffer ) + headerSize )[ buffer->width * y + x ]
   #endMacro
-  
-  '#macro countNeighbor( _
-  '  buffer, x, y, counter )
-  '  
-  '  counter +=> iif( _
-  '    x >= 0 andAlso _
-  '    y >= 0 andAlso _
-  '    x <= m_width - 1 andAlso _
-  '    y <= m_height - 1 andAlso _
-  '    pixel( buffer, x, y ) = State.ElectronHead, _
-  '    1, 0 )
-  '#endmacro
   
   for _
     y as integer => 0 to m_height - 1
@@ -133,16 +117,19 @@ sub _
       dim as ulong _
         currentPixel => _
           pixel( _
-            m_circuit( m_activeCircuit ), x, y )
+            m_circuit( m_activeCircuit ), _
+            x, y )
           
       select case( currentPixel )
         case( State.ElectronHead )
           pixel( _
-            m_circuit( m_backCircuit ), x, y ) => State.ElectronTail
+            m_circuit( m_backCircuit ), _
+            x, y ) => State.ElectronTail
           
         case( State.ElectronTail )
           pixel( _
-            m_circuit( m_backCircuit ), x, y ) => State.Connector
+            m_circuit( m_backCircuit ), _
+            x, y ) => State.Connector
           
         case( State.Connector )
           dim as integer _
@@ -160,7 +147,8 @@ sub _
                 
                 if( _
                   pixel( _
-                    m_circuit( m_activeCircuit ), xx, yy ) = State.ElectronHead ) then
+                    m_circuit( m_activeCircuit ), _
+                    xx, yy ) = State.ElectronHead ) then
                   
                   neighbors += 1
                 end if
@@ -168,55 +156,25 @@ sub _
             next
           next
           
-          'countNeighbor( _
-          '  m_circuit( m_activeCircuit ), _
-          '  x - 1, y - 1, _
-          '  neighbors )
-          'countNeighbor( _
-          '  m_circuit( m_activeCircuit ), _
-          '  x, y - 1, _
-          '  neighbors )
-          'countNeighbor( _
-          '  m_circuit( m_activeCircuit ), _
-          '  x + 1, y - 1, _
-          '  neighbors )
-          'countNeighbor( _
-          '  m_circuit( m_activeCircuit ), _
-          '  x + 1, y, _
-          '  neighbors )
-          'countNeighbor( _
-          '  m_circuit( m_activeCircuit ), _
-          '  x + 1, y + 1, _
-          '  neighbors )
-          'countNeighbor( _
-          '  m_circuit( m_activeCircuit ), _
-          '  x, y + 1, _
-          '  neighbors )
-          'countNeighbor( _
-          '  m_circuit( m_activeCircuit ), _
-          '  x - 1, y + 1, _
-          '  neighbors )
-          'countNeighbor( _
-          '  m_circuit( m_activeCircuit ), _
-          '  x - 1, y, _
-          '  neighbors )
-          
           if( _
             neighbors = 1 orElse _
             neighbors = 2 ) then
             
             pixel( _
-              m_circuit( m_backCircuit ), x, y ) => State.ElectronHead
+              m_circuit( m_backCircuit ), _
+              x, y ) => State.ElectronHead
           else
             pixel( _
-              m_circuit( m_backCircuit ), x, y ) => State.Connector
+              m_circuit( m_backCircuit ), _
+              x, y ) => State.Connector
           end if
         
         case else
           pixel( _
-            m_circuit( m_backCircuit ), x, y ) => _
-            pixel( _
-              m_circuit( m_activeCircuit ), x, y )
+            m_circuit( m_backCircuit ), _
+            x, y ) => pixel( _
+              m_circuit( m_activeCircuit ), _
+              x, y )
       end select
     next
   next
@@ -226,15 +184,15 @@ sub _
     m_backCircuit
   
   #undef pixel
-  #undef countNeighbor
 end sub
 
 /'
   Test code
 '/
 screenRes( 800, 600, 32 )
+windowTitle( "FreeBasic Wireworld!" )
 
-var aCircuit => new WireWorld( 800, 600 )
+var aCircuit => new Wireworld( 800, 600 )
 
 bload( "prime-computer.bmp", *aCircuit )
 
@@ -244,7 +202,7 @@ do
   screenLock()
     put _
       ( 0, 0 ), _
-      aCircuit->circuit, pset
+      *aCircuit, pset
   screenUnlock()
   
   sleep( 1, 1 )
